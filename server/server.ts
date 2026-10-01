@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
 import { Document, Packer, Paragraph, TextRun } from "docx";
+import Vespper from "vespper";
 import {
   APP_DOCKER_URL,
   APP_PUBLIC_URL,
@@ -26,7 +27,12 @@ import {
 } from "./config";
 import { runAgent } from "./agent";
 import { DocumentVersionGuard } from "./document-version";
-import { parseChatMessages } from "./types";
+import {
+  ApplyRequestSchema,
+  parseChatMessages,
+  type ApplyEvent,
+} from "./types";
+import { setLastModifiedBy } from "./utils";
 
 const documentVersionGuard = new DocumentVersionGuard();
 const revisions = new Map<string, Buffer>();
@@ -260,6 +266,99 @@ app.post(
     return;
   },
 );
+
+app.post(
+  "/api/word/apply",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    if (!VESPPER_API_KEY?.startsWith("sk_live_")) {
+      return res.status(500).json({
+        error: "Set a valid VESPPER_API_KEY in onlyoffice-add-in/.env.",
+      });
+    }
+    let request;
+    try {
+      request = ApplyRequestSchema.parse(JSON.parse(String(req.body.request)));
+    } catch (error) {
+      return res.status(400).json({
+        error: error instanceof Error ? error.message : "Invalid apply request",
+      });
+    }
+    if (request.sessionId === undefined && !req.file?.buffer.length) {
+      return res
+        .status(400)
+        .json({ error: "Attach the document or pass a sessionId" });
+    }
+
+    res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+
+    const write = (event: ApplyEvent) =>
+      res.write(`${JSON.stringify(event)}\n`);
+
+    const client = new Vespper({
+      apiKey: VESPPER_API_KEY,
+      mcpUrl: VESPPER_MCP_URL,
+    });
+    const { author, edits } = request;
+    try {
+      let sessionId = request.sessionId;
+      if (sessionId === undefined) {
+        sessionId = await client.openSession(req.file!.buffer);
+        write({ type: "session", sessionId });
+      }
+      for await (const outcome of client.applyEdits(sessionId, edits, {
+        author,
+        trackChanges: false,
+        startIndex: request.startIndex ?? 0,
+      })) {
+        if (res.destroyed) break;
+        const { id } = edits[outcome.position]!;
+        if (!outcome.ok) {
+          write({
+            type: "suggestion_failed",
+            id,
+            code: outcome.code,
+            reason: outcome.reason,
+          });
+          continue;
+        }
+        const document = await setLastModifiedBy(outcome.document, author);
+        write({
+          type: "edit_applied",
+          docx_b64: document.toString("base64"),
+          revision: outcome.revision,
+        });
+        write({ type: "suggestion_applied", id });
+      }
+    } catch (error) {
+      if (!res.destroyed) {
+        write({
+          type: "error",
+          detail: error instanceof Error ? error.message : String(error),
+        });
+      }
+    } finally {
+      if (!res.destroyed) res.end();
+    }
+    return;
+  },
+);
+
+app.delete("/api/word/apply/:sessionId", async (req, res) => {
+  try {
+    const client = new Vespper({
+      apiKey: VESPPER_API_KEY,
+      mcpUrl: VESPPER_MCP_URL,
+    });
+    await client.closeSession(req.params.sessionId);
+    res.sendStatus(204);
+  } catch (error) {
+    res
+      .status(502)
+      .send(error instanceof Error ? error.message : String(error));
+  }
+});
 
 app.use(
   "/plugin",
