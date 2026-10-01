@@ -31,8 +31,8 @@ npm start
 ```
 
 Open <http://localhost:3101>. The first Docker startup can take a few minutes.
-The Vespper plugin starts automatically; click the **V** icon on the right if
-its panel is collapsed.
+The Vespper plugin starts automatically; click the **V** icon on the left if
+its panel is collapsed. Drag the panel's edge to widen it (up to 600 px).
 
 Stop the editor with:
 

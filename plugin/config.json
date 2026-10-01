@@ -11,7 +11,7 @@
       "icons": ["icon.svg"],
       "EditorsSupport": ["word"],
       "isViewer": false,
-      "type": "panelRight",
+      "type": "panel",
       "initDataType": "none",
       "initData": "",
       "initOnSelectionChanged": true,
