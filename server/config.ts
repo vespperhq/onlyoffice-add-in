@@ -37,6 +37,8 @@ export const VESPPER_MCP_URL = (
   process.env.VESPPER_MCP_URL ?? "https://mcp.vespper.com/mcp"
 ).replace(/\/+$/, "");
 export const DOCX_AUTHOR = process.env.DOCX_AUTHOR ?? "Vespper Agent";
+// The agent proposes edits as suggestion cards; false applies them as it writes.
+export const USE_SUGGESTIONS = process.env.USE_SUGGESTIONS !== "false";
 export const DEFAULT_MODEL =
   process.env.ONLYOFFICE_AGENT_MODEL ??
   process.env.WORD_AGENT_MODEL ??
@@ -81,6 +83,7 @@ export const HEALTH = {
   availableModels: AVAILABLE_MODELS,
   mcpUrl: VESPPER_MCP_URL,
   editor: "onlyoffice",
+  suggestions: USE_SUGGESTIONS,
 };
 
 // The Document Server editor config for the document with this key.

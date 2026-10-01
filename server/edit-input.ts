@@ -1,8 +1,9 @@
 import { JSONParser } from "@streamparser/json";
 import { EditPairSchema, type EditInputParser, type EditPair } from "./types";
 
+/** Parses streamed edit_document arguments, calling `onPairReady` as each pair completes. */
 export function createEditInputParser(options: {
-  onEdit(index: number, edit: EditPair): void;
+  onPairReady(index: number, edit: EditPair): void;
   onError(): void;
 }): EditInputParser {
   const parser = new JSONParser({
@@ -14,7 +15,7 @@ export function createEditInputParser(options: {
   parser.onValue = ({ key, value, partial }) => {
     if (partial || typeof key !== "number") return;
     const edit = EditPairSchema.safeParse(value);
-    if (edit.success) options.onEdit(key, edit.data);
+    if (edit.success) options.onPairReady(key, edit.data);
   };
 
   return {

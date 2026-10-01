@@ -60,6 +60,39 @@ export const EditPairSchema = z.object({
 });
 export type EditPair = z.infer<typeof EditPairSchema>;
 
+export const SuggestionEditSchema = z.object({
+  id: z.string().min(1),
+  old: z.string(),
+  new: z.string(),
+});
+
+// The first apply of a session attaches the document and omits sessionId;
+// later applies join that session's batch with sessionId and startIndex.
+export const ApplyRequestSchema = z
+  .object({
+    sessionId: z.string().min(1).optional(),
+    startIndex: z.int().nonnegative().optional(),
+    author: z.string().min(1),
+    edits: z.array(SuggestionEditSchema).min(1),
+  })
+  .refine(
+    (request) =>
+      (request.sessionId === undefined) === (request.startIndex === undefined),
+    "sessionId and startIndex must be sent together",
+  );
+
+export type ApplyEvent =
+  | { type: "session"; sessionId: string }
+  | { type: "edit_applied"; docx_b64: string; revision: number }
+  | { type: "suggestion_applied"; id: string }
+  | {
+      type: "suggestion_failed";
+      id: string;
+      code: string | null;
+      reason: string;
+    }
+  | { type: "error"; detail: string };
+
 export const CommittedDocumentSchema = z
   .object({
     ok: z.literal(true),
