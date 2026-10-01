@@ -1,0 +1,19 @@
+services:
+  onlyoffice:
+    # Pinned to the build the example was last tested end to end on. The
+    # plugin finds the editor internals it patches at runtime, and refuses to
+    # apply edits on builds where it can't.
+    image: onlyoffice/documentserver:9.2@sha256:fd38f611f1127190be306fa1eb09d5f4ff7d1d2509aef3dd14aa56377915829d
+    platform: linux/amd64
+    # The Document Server downloads its own cache URLs (e.g. images during
+    # Compare) using the address the browser sees, so it must be reachable at
+    # the same host and port from inside the container.
+    ports:
+      - "80:80"
+    environment:
+      JWT_ENABLED: "false"
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+      ALLOW_META_IP_ADDRESS: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

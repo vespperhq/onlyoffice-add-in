@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vespper for ONLYOFFICE</title>
+    <link rel="stylesheet" href="/editor.css" />
+  </head>
+  <body>
+    <header id="toolbar">
+      <label class="button">
+        Open .docx
+        <input id="open-file" type="file" accept=".docx" hidden />
+      </label>
+    </header>
+    <main>
+      <div id="status">Starting ONLYOFFICE…</div>
+      <div id="editor"></div>
+    </main>
+    <script src="http://localhost/web-apps/apps/api/documents/api.js"></script>
+    <script src="/editor.js"></script>
+  </body>
+</html>
