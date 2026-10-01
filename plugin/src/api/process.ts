@@ -1,11 +1,14 @@
 import {
   DocumentUpdateSchema,
+  SuggestionReadySchema,
   TraceEventType,
   type ChatMessage,
   type DocumentUpdate,
   type DoneEvent,
+  type SuggestionReady,
   type TraceEvent,
 } from "../types";
+import { readNdjson } from "./ndjson";
 
 const FETCH_TIMEOUT_MS = 300_000;
 
@@ -18,6 +21,7 @@ export type ProcessArg = {
   signal: AbortSignal;
   onEvent: (event: TraceEvent) => void;
   onDocument: (update: DocumentUpdate) => Promise<void>;
+  onSuggestionReady: (event: SuggestionReady) => void;
 };
 
 export type ProcessResult = {
@@ -59,7 +63,7 @@ function removeDocumentFromEvent(event: TraceEvent): TraceEvent {
   };
 }
 
-async function parseJsonError(resp: Response): Promise<string> {
+export async function parseJsonError(resp: Response): Promise<string> {
   const text = await resp.text();
   try {
     const body = JSON.parse(text) as { error?: string };
@@ -108,67 +112,39 @@ export async function sendProcess(
   if (!resp.ok) throw new Error(await parseJsonError(resp));
   if (!resp.body) throw new Error("No response body to stream.");
 
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
   let doneEvent: DoneEvent | null = null;
   let errorDetail: string | null = null;
   let documentApplyError: unknown;
   let documentApplyChain = Promise.resolve();
   let latestDocumentRevision = -1;
 
-  const cancelReader = () => {
-    void reader.cancel().catch(() => {
-      /* already closed */
-    });
-  };
-  arg.signal.addEventListener("abort", cancelReader, { once: true });
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let nl: number;
-      while ((nl = buf.indexOf("\n")) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (!line) continue;
-        let msg: StreamMessage;
-        try {
-          msg = JSON.parse(line) as StreamMessage;
-        } catch {
-          continue;
-        }
-        if (msg.type === "done") doneEvent = msg as unknown as DoneEvent;
-        else if (msg.type === TraceEventType.ERROR && msg.detail != null) {
-          errorDetail = String(msg.detail);
-        } else {
-          const documentUpdate = getDocumentUpdate(msg);
-          if (TRACE_EVENT_TYPES.has(msg.type)) {
-            arg.onEvent({
-              ...removeDocumentFromEvent(msg as TraceEvent),
-              receivedAt: performance.now(),
-            });
+  for await (const message of readNdjson(resp.body, arg.signal)) {
+    const msg = message as StreamMessage;
+    if (msg.type === "done") doneEvent = msg as unknown as DoneEvent;
+    else if (msg.type === TraceEventType.ERROR && msg.detail != null) {
+      errorDetail = String(msg.detail);
+    } else if (msg.type === "suggestion_ready") {
+      const ready = SuggestionReadySchema.safeParse(message);
+      if (ready.success) arg.onSuggestionReady(ready.data);
+    } else {
+      const documentUpdate = getDocumentUpdate(msg);
+      if (TRACE_EVENT_TYPES.has(msg.type)) {
+        arg.onEvent({
+          ...removeDocumentFromEvent(msg as TraceEvent),
+          receivedAt: performance.now(),
+        });
+      }
+      if (documentUpdate && documentUpdate.revision > latestDocumentRevision) {
+        latestDocumentRevision = documentUpdate.revision;
+        documentApplyChain = documentApplyChain.then(async () => {
+          try {
+            await arg.onDocument(documentUpdate);
+          } catch (error) {
+            documentApplyError ??= error;
           }
-          if (
-            documentUpdate &&
-            documentUpdate.revision > latestDocumentRevision
-          ) {
-            latestDocumentRevision = documentUpdate.revision;
-            documentApplyChain = documentApplyChain.then(async () => {
-              try {
-                await arg.onDocument(documentUpdate);
-              } catch (error) {
-                documentApplyError ??= error;
-              }
-            });
-          }
-        }
+        });
       }
     }
-  } finally {
-    arg.signal.removeEventListener("abort", cancelReader);
   }
 
   await documentApplyChain;

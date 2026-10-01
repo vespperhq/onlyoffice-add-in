@@ -2,6 +2,7 @@ import type { ClipboardEvent, FormEvent, KeyboardEvent } from "react";
 import {
   useChatComposer,
   useChatModels,
+  useChatSuggestions,
   useConversation,
 } from "../context/ChatContext";
 import { getPastedImageFiles } from "../images";
@@ -37,6 +38,7 @@ export function ChatInputBar() {
   } = useChatComposer();
   const { model, models, modelsLoading, setModel } = useChatModels();
   const { busy, send, stop } = useConversation();
+  const { applying } = useChatSuggestions();
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -78,7 +80,10 @@ export function ChatInputBar() {
     ? getModelLabel(model)
     : "Default";
   const canSend =
-    !busy && !imagesLoading && Boolean(instruction.trim() || images.length);
+    !busy &&
+    !applying &&
+    !imagesLoading &&
+    Boolean(instruction.trim() || images.length);
 
   return (
     <form
