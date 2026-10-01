@@ -80,14 +80,14 @@ npm start
 ```
 
 This starts the ONLYOFFICE Document Server in Docker, builds the plugin, and
-starts the local server at <http://localhost:3101>. The first run pulls the
+starts the local server at <http://localhost:3100>. The first run pulls the
 Document Server image, so it can take a few minutes before the editor loads.
 
-Open <http://localhost:3101>. The Vespper plugin starts automatically; click
+Open <http://localhost:3100>. The Vespper plugin starts automatically; click
 the **V** icon on the left if its panel is collapsed. Drag the panel's edge to
 widen it (up to 600 px).
 
-To verify configuration, open <http://localhost:3101/health>. Both
+To verify configuration, open <http://localhost:3100/health>. Both
 `vespperConfigured` and `agentConfigured` should be `true`.
 
 Stop the Document Server with:
@@ -98,7 +98,7 @@ npm stop
 
 ## Try an edit
 
-1. Open <http://localhost:3101>. A welcome document is loaded the first time.
+1. Open <http://localhost:3100>. A welcome document is loaded the first time.
    To edit your own file, use **Open .docx** above the editor.
 2. Open the Vespper panel.
 3. Ask for an edit.
@@ -119,14 +119,14 @@ the app and delete that file.
 
 ## Development commands
 
-| Command             | Purpose                                                  |
-| ------------------- | -------------------------------------------------------- |
-| `npm start`         | Start the Document Server, then build and serve the app  |
-| `npm stop`          | Stop the Document Server container                       |
-| `npm run dev`       | Build and serve the app with a watcher, without Docker   |
-| `npm run build`     | Build the plugin assets once                             |
-| `npm test`          | Run the server and plugin tests                          |
-| `npm run typecheck` | Type-check the server and plugin                         |
+| Command             | Purpose                                                 |
+| ------------------- | ------------------------------------------------------- |
+| `npm start`         | Start the Document Server, then build and serve the app |
+| `npm stop`          | Stop the Document Server container                      |
+| `npm run dev`       | Build and serve the app with a watcher, without Docker  |
+| `npm run build`     | Build the plugin assets once                            |
+| `npm test`          | Run the server and plugin tests                         |
+| `npm run typecheck` | Type-check the server and plugin                        |
 
 ## Project layout
 
