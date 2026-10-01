@@ -2,6 +2,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { useChatConversation } from "../hooks/useChatConversation";
 import { useImageAttachments } from "../hooks/useImageAttachments";
 import { useModelSelection } from "../hooks/useModelSelection";
+import { useSuggestions } from "../hooks/useSuggestions";
 import { useWordSelection } from "../onlyoffice/useWordSelection";
 
 type ChatContextValue = {
@@ -17,6 +18,7 @@ type ChatContextValue = {
     removeImage: (id: string) => void;
   };
   conversation: ReturnType<typeof useChatConversation>;
+  suggestions: ReturnType<typeof useSuggestions>;
   models: ReturnType<typeof useModelSelection>;
   settings: {
     settingsOpen: boolean;
@@ -36,6 +38,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const { selectedContent, clearSelectedContent } = useWordSelection();
   const imageAttachments = useImageAttachments();
   const models = useModelSelection();
+  const suggestions = useSuggestions(author.trim() || "Vespper Agent");
 
   const conversation = useChatConversation({
     instruction,
@@ -48,6 +51,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setInstruction("");
       imageAttachments.clearImages();
     },
+    applying: suggestions.applying,
+    onSuggestionsProposed: suggestions.addSet,
+    onSuggestionReady: suggestions.addSuggestion,
+    getSuggestionReview: suggestions.getReview,
   });
 
   return (
@@ -65,6 +72,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           removeImage: imageAttachments.removeImage,
         },
         conversation,
+        suggestions,
         models,
         settings: {
           settingsOpen,
@@ -94,6 +102,10 @@ export function useChatComposer() {
 
 export function useConversation() {
   return useChatContext().conversation;
+}
+
+export function useChatSuggestions() {
+  return useChatContext().suggestions;
 }
 
 export function useChatModels() {

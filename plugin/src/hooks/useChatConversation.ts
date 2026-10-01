@@ -14,8 +14,11 @@ import {
   turnsToMessages,
 } from "../trace";
 import {
+  ProposedEditResultSchema,
   TraceEventType,
   type MessageImage,
+  type ProposedEditResult,
+  type SuggestionReady,
   type TraceEvent,
   type Turn,
 } from "../types";
@@ -28,6 +31,11 @@ type UseChatConversationOptions = {
   author: string;
   model: string;
   clearComposer: () => void;
+  /** Accepted suggestions are still being applied; a new turn must wait. */
+  applying: boolean;
+  onSuggestionsProposed: (toolCallId: string, result: ProposedEditResult) => void;
+  onSuggestionReady: (event: SuggestionReady) => void;
+  getSuggestionReview: (setId: string) => string | undefined;
 };
 
 export function useChatConversation({
@@ -38,6 +46,10 @@ export function useChatConversation({
   author,
   model,
   clearComposer,
+  applying,
+  onSuggestionsProposed,
+  onSuggestionReady,
+  getSuggestionReview,
 }: UseChatConversationOptions) {
   const { trigger: processDocument, reset: resetProcess } = useProcess();
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -80,7 +92,7 @@ export function useChatConversation({
   }
 
   async function send() {
-    if (busy || imagesLoading) return;
+    if (busy || imagesLoading || applying) return;
     const text = instruction.trim();
     const trackedAuthor = author.trim() || "Vespper Agent";
     const imagesForTurn = images;
@@ -93,7 +105,10 @@ export function useChatConversation({
     );
     if (!currentMessage) return;
 
-    const history = [...turnsToMessages(turns), currentMessage];
+    const history = [
+      ...turnsToMessages(turns, getSuggestionReview),
+      currentMessage,
+    ];
     clearComposer();
     resetProcess();
     setTurns((previous) => [
@@ -142,6 +157,15 @@ export function useChatConversation({
     };
 
     const queueTraceEvent = (event: TraceEvent) => {
+      if (
+        event.type === TraceEventType.TOOL_RESULT &&
+        event.payload.toolName === "edit_document"
+      ) {
+        const proposed = ProposedEditResultSchema.safeParse(event.payload.result);
+        if (proposed.success) {
+          onSuggestionsProposed(event.payload.toolCallId, proposed.data);
+        }
+      }
       queuedTraceEvents.push(event);
       const isDelta =
         event.type === TraceEventType.REASONING_DELTA ||
@@ -172,6 +196,7 @@ export function useChatConversation({
         trackChanges,
         signal: thisRun.controller.signal,
         onEvent: queueTraceEvent,
+        onSuggestionReady,
         onDocument: async ({ docx_b64 }) => {
           if (thisRun.controller.signal.aborted) return;
 
