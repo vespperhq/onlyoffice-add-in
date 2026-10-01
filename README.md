@@ -80,14 +80,14 @@ npm start
 ```
 
 This starts the ONLYOFFICE Document Server in Docker, builds the plugin, and
-starts the local server at <http://localhost:3100>. The first run pulls the
+starts the local server at <http://localhost:3101>. The first run pulls the
 Document Server image, so it can take a few minutes before the editor loads.
 
-Open <http://localhost:3100>. The Vespper plugin starts automatically; click
+Open <http://localhost:3101>. The Vespper plugin starts automatically; click
 the **V** icon on the left if its panel is collapsed. Drag the panel's edge to
 widen it (up to 600 px).
 
-To verify configuration, open <http://localhost:3100/health>. Both
+To verify configuration, open <http://localhost:3101/health>. Both
 `vespperConfigured` and `agentConfigured` should be `true`.
 
 Stop the Document Server with:
@@ -98,7 +98,7 @@ npm stop
 
 ## Try an edit
 
-1. Open <http://localhost:3100>. A welcome document is loaded the first time.
+1. Open <http://localhost:3101>. A welcome document is loaded the first time.
    To edit your own file, use **Open .docx** above the editor.
 2. Open the Vespper panel.
 3. Ask for an edit.
