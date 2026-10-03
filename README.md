@@ -15,6 +15,10 @@ The example includes the following features:
 
 This example is also available through [Vespper Examples](https://github.com/vespperhq/examples).
 
+## Demo video
+
+[![Watch the ONLYOFFICE add-in demo on YouTube](https://img.youtube.com/vi/pYGAqsNdeds/maxresdefault.jpg)](https://youtu.be/pYGAqsNdeds)
+
 ## Prerequisites
 
 - Node.js 22.13 or newer
